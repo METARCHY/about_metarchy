@@ -1,7 +1,7 @@
 import {
     MatchState, PlayerState, GamePhase, ActorType, LocationType,
     ResourceType, ValueType, ActionCardType, ActorPlacement, ArgumentType
-} from '../types/game';
+} from '../types/game.js';
 
 export function createInitialPlayerState(id: string, address?: string): PlayerState {
     return {
@@ -76,7 +76,7 @@ export class Match {
         for (const b of bets) {
             if (tempResources[b.bet] <= 0) throw new Error(`Not enough ${b.bet} tokens.`);
             tempResources[b.bet]--;
-            const placement = player.actorsPlacements.find(p => p.actor === b.actor);
+            const placement = player.actorsPlacements.find((p: ActorPlacement) => p.actor === b.actor);
             if (placement) placement.bet = b.bet;
         }
 
@@ -99,7 +99,7 @@ export class Match {
     }
 
     private checkPhaseAdvance() {
-        const allPlayers = Object.values(this.state.players);
+        const allPlayers = Object.values(this.state.players) as PlayerState[];
         if (this.state.currentPhase === GamePhase.DISTRIBUTION) {
             if (allPlayers.every(p => p.hasCommittedDistribution)) {
                 this.advanceToPhase(GamePhase.BETS);
@@ -136,7 +136,7 @@ export class Match {
         if (this.state.currentTurn > this.state.maxTurns) {
             this.log("Game Over!");
         } else {
-            Object.values(this.state.players).forEach(p => {
+            (Object.values(this.state.players) as PlayerState[]).forEach(p => {
                 p.hasCommittedDistribution = false;
                 p.hasCommittedBets = false;
                 p.hasCommittedActions = false;

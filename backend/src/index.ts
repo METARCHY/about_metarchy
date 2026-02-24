@@ -2,11 +2,23 @@ import express from 'express';
 import type { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { setupSocketHandlers } from './sockets/MatchHandler.js';
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 4000;
+
+// HTTP Server and Socket.IO
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: "*", // TODO: Update for production
+        methods: ["GET", "POST"]
+    }
+});
 
 // Middleware
 app.use(cors());
@@ -22,6 +34,8 @@ app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.listen(port, () => {
+setupSocketHandlers(io);
+
+httpServer.listen(port, () => {
     console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });

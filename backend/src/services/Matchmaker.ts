@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Match } from '../models/Match';
+import { Match } from '../models/Match.js';
 
 export class Matchmaker {
     private waitingPlayers: string[] = [];
