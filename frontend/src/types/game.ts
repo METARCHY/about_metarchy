@@ -58,8 +58,19 @@ export type ArgumentQueue = [ArgumentType, ArgumentType, ArgumentType];
 export interface ActorPlacement {
     actor: ActorType;
     location: LocationType;
-    argumentQueue: ArgumentQueue;
+    argument: ArgumentType;
     bet?: ResourceType; // Optional bet attached to this actor
+}
+
+export interface ConflictResult {
+    location: LocationType;
+    winnerId: string | 'TIE' | null; // socket ID, 'TIE', or null (unopposed)
+    p1Actor?: ActorType;
+    p2Actor?: ActorType;
+    p1Arg?: ArgumentType;
+    p2Arg?: ArgumentType;
+    rewardType?: ValueType;
+    rewardCount?: number;
 }
 
 export interface PlayerState {
@@ -95,6 +106,9 @@ export interface MatchState {
 
     // Board Modifiers
     blockedLocations: LocationType[];
+
+    // Resolution
+    conflictResults: ConflictResult[];
 
     // Log
     eventLog: string[];

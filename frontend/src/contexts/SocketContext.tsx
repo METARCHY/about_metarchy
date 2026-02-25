@@ -8,12 +8,14 @@ const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000"
 
 interface SocketContextContext {
     socket: Socket | null;
+    socketId: string | undefined;
     isConnected: boolean;
     matchState: MatchState | null;
     joinQueue: () => void;
     commitDistribution: (placements: any) => void;
     commitBets: (bets: any) => void;
     commitActions: (actions: any) => void;
+    devForceAdvance: () => void;
     error: string | null;
 }
 
@@ -88,16 +90,24 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const devForceAdvance = () => {
+        if (socket && matchState) {
+            socket.emit("dev_force_advance", { matchId: matchState.matchId });
+        }
+    };
+
     return (
         <SocketContext.Provider
             value={{
                 socket,
+                socketId: socket?.id,
                 isConnected,
                 matchState,
                 joinQueue,
                 commitDistribution,
                 commitBets,
                 commitActions,
+                devForceAdvance,
                 error,
             }}
         >

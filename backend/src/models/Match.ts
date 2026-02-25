@@ -9,9 +9,9 @@ export function createInitialPlayerState(id: string, address?: string): PlayerSt
         walletAddress: address,
         actorsPlacements: [],
         resourceTokens: {
-            [ResourceType.PRODUCTION]: 0,
-            [ResourceType.ELECTRICITY]: 0,
-            [ResourceType.RECYCLING]: 0
+            [ResourceType.PRODUCTION]: 3,
+            [ResourceType.ELECTRICITY]: 3,
+            [ResourceType.RECYCLING]: 3
         },
         valueTokens: {
             [ValueType.POWER]: 0,
@@ -44,6 +44,7 @@ export class Match {
             currentPhase: GamePhase.DISTRIBUTION, // Turn 1 skips Event Phase
             turnTimerEndTime: Date.now() + 120000,
             blockedLocations: [],
+            conflictResults: [],
             eventLog: [`Match ${matchId} started. Turn 1 Distribution phase begins.`]
         };
     }
@@ -98,6 +99,19 @@ export class Match {
         this.checkPhaseAdvance();
     }
 
+    public forceAdvancePhase() {
+        if (this.state.currentPhase === GamePhase.DISTRIBUTION) {
+            this.advanceToPhase(GamePhase.BETS);
+        } else if (this.state.currentPhase === GamePhase.BETS) {
+            this.advanceToPhase(GamePhase.ACTIONS);
+        } else if (this.state.currentPhase === GamePhase.ACTIONS) {
+            this.resolveConflictPhase();
+        } else if (this.state.currentPhase === GamePhase.RESOLUTION) {
+            this.advanceTurn();
+        }
+        this.log(`DEV FORCED phase advance from ${this.state.currentPhase}`);
+    }
+
     private checkPhaseAdvance() {
         const allPlayers = Object.values(this.state.players) as PlayerState[];
         if (this.state.currentPhase === GamePhase.DISTRIBUTION) {
@@ -125,10 +139,144 @@ export class Match {
         this.advanceToPhase(GamePhase.RESOLUTION);
         this.log("Resolving Conflicts...");
 
-        // Future: implement Action Card priority sequences and RPS Argument Queue logic here
+        const p1Id = this.state.playerIds[0];
+        const p2Id = this.state.playerIds[1];
+        const p1 = this.state.players[p1Id];
+        const p2 = this.state.players[p2Id];
 
-        // Auto advance turn for V1 MVP
-        this.advanceTurn();
+        this.state.conflictResults = [];
+
+        // 1. Group Placements by Location
+        const locationsToEvaluate = new Set<LocationType>();
+        const p1ByLoc: Partial<Record<LocationType, ActorPlacement[]>> = {};
+        const p2ByLoc: Partial<Record<LocationType, ActorPlacement[]>> = {};
+
+        p1.actorsPlacements.forEach(p => {
+            if (!p1ByLoc[p.location]) p1ByLoc[p.location] = [];
+            p1ByLoc[p.location]!.push(p);
+            locationsToEvaluate.add(p.location);
+        });
+
+        p2.actorsPlacements.forEach(p => {
+            if (!p2ByLoc[p.location]) p2ByLoc[p.location] = [];
+            p2ByLoc[p.location]!.push(p);
+            locationsToEvaluate.add(p.location);
+        });
+
+        // Helper Map to assign Value Tokens based on winning a location
+        const locationRewards: Record<LocationType, ValueType> = {
+            [LocationType.UNIVERSITY]: ValueType.KNOWLEDGE,
+            [LocationType.THEATER]: ValueType.ART,
+            [LocationType.SQUARE]: ValueType.FAME,
+            [LocationType.FACTORY]: ValueType.POWER,
+            [LocationType.ENERGY_PLANT]: ValueType.POWER,
+            [LocationType.DUMP]: ValueType.POWER
+        };
+
+        // 2. Evaluate each Location
+        for (const loc of Array.from(locationsToEvaluate)) {
+            const p1Actors = p1ByLoc[loc] || [];
+            const p2Actors = p2ByLoc[loc] || [];
+
+            // Case A: Unopposed (Player 1)
+            if (p1Actors.length > 0 && p2Actors.length === 0) {
+                const reward = locationRewards[loc];
+                p1.valueTokens[reward] += p1Actors.length;
+                this.state.conflictResults.push({
+                    location: loc,
+                    winnerId: p1Id,
+                    p1Actor: p1Actors[0].actor,
+                    p1Arg: p1Actors[0].argument,
+                    rewardType: reward,
+                    rewardCount: p1Actors.length
+                });
+                this.log(`Player A (${p1Id.substring(0, 4)}) captured ${loc} unopposed. Gained ${p1Actors.length} ${reward}.`);
+                continue;
+            }
+
+            // Case B: Unopposed (Player 2)
+            if (p2Actors.length > 0 && p1Actors.length === 0) {
+                const reward = locationRewards[loc];
+                p2.valueTokens[reward] += p2Actors.length;
+                this.state.conflictResults.push({
+                    location: loc,
+                    winnerId: p2Id,
+                    p2Actor: p2Actors[0].actor,
+                    p2Arg: p2Actors[0].argument,
+                    rewardType: reward,
+                    rewardCount: p2Actors.length
+                });
+                this.log(`Player B (${p2Id.substring(0, 4)}) captured ${loc} unopposed. Gained ${p2Actors.length} ${reward}.`);
+                continue;
+            }
+
+            // Case C: Conflict! (For MVP, we just match the first actor vs the first actor)
+            const p1Arg = p1Actors[0].argument;
+            const p2Arg = p2Actors[0].argument;
+
+            this.log(`Conflict at ${loc}! P1 [${p1Arg}] vs P2 [${p2Arg}]`);
+
+            // RPS Logic
+            let winner: string | null = null;
+            if (p1Arg === p2Arg) {
+                winner = "TIE";
+            } else if (p1Arg === ArgumentType.DUMMY) {
+                winner = p2Id; // Dummy always loses
+            } else if (p2Arg === ArgumentType.DUMMY) {
+                winner = p1Id;
+            } else if (
+                (p1Arg === ArgumentType.ROCK && p2Arg === ArgumentType.SCISSORS) ||
+                (p1Arg === ArgumentType.PAPER && p2Arg === ArgumentType.ROCK) ||
+                (p1Arg === ArgumentType.SCISSORS && p2Arg === ArgumentType.PAPER)
+            ) {
+                winner = p1Id;
+            } else {
+                winner = p2Id;
+            }
+
+            if (winner === "TIE") {
+                this.state.conflictResults.push({
+                    location: loc,
+                    winnerId: "TIE",
+                    p1Actor: p1Actors[0].actor,
+                    p2Actor: p2Actors[0].actor,
+                    p1Arg: p1Arg,
+                    p2Arg: p2Arg
+                });
+                this.log(`--> It's a Tie! Both arguments destroyed. No reward.`);
+            } else if (winner === p1Id) {
+                const reward = locationRewards[loc];
+                p1.valueTokens[reward] += 1;
+                this.state.conflictResults.push({
+                    location: loc,
+                    winnerId: p1Id,
+                    p1Actor: p1Actors[0].actor,
+                    p2Actor: p2Actors[0].actor,
+                    p1Arg: p1Arg,
+                    p2Arg: p2Arg,
+                    rewardType: reward,
+                    rewardCount: 1
+                });
+                this.log(`--> P1 Wins! Granted 1 ${reward}.`);
+            } else {
+                const reward = locationRewards[loc];
+                p2.valueTokens[reward] += 1;
+                this.state.conflictResults.push({
+                    location: loc,
+                    winnerId: p2Id,
+                    p1Actor: p1Actors[0].actor,
+                    p2Actor: p2Actors[0].actor,
+                    p1Arg: p1Arg,
+                    p2Arg: p2Arg,
+                    rewardType: reward,
+                    rewardCount: 1
+                });
+                this.log(`--> P2 Wins! Granted 1 ${reward}.`);
+            }
+        }
+
+        // We DO NOT auto-advance here anymore, the frontend needs time to render RESOLUTION animations.
+        // The devForceAdvance will move it from RESOLUTION to EVENT.
     }
 
     private advanceTurn() {
@@ -144,6 +292,7 @@ export class Match {
                 p.actorsPlacements = []; // Reset actors back to hand
             });
             this.state.blockedLocations = [];
+            this.state.conflictResults = [];
             this.advanceToPhase(GamePhase.EVENT);
         }
     }

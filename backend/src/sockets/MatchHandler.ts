@@ -61,6 +61,21 @@ export function setupSocketHandlers(io: Server) {
             }
         });
 
+        // ---------------------------------------------------------------------
+        // DEV TOOL: Force Advance Phase (Bypasses hasCommitted logic)
+        // ---------------------------------------------------------------------
+        socket.on('dev_force_advance', (payload: { matchId: string }) => {
+            const match = globalMatchmaker.getMatch(payload.matchId);
+            if (!match) return socket.emit('error', 'Match not found');
+
+            try {
+                match.forceAdvancePhase();
+                io.to(payload.matchId).emit('match_updated', match.state);
+            } catch (err: any) {
+                socket.emit('error', err.message);
+            }
+        });
+
         socket.on('disconnect', () => {
             console.log(`User disconnected: ${socket.id}`);
             // TODO: Logic to handle player disconnecting from queue or forfeiting a match
