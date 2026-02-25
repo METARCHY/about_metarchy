@@ -103,3 +103,5 @@ dist
 # OS metadata
 .DS_Store
 Thumbs.db
+
+/src/generated/prisma

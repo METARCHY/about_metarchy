@@ -1,9 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
-import {
-    MatchState, PlayerState, GamePhase, ActorType, LocationType,
-    ResourceType, ValueType, ActionCardType, ActorPlacement, ArgumentType, ConflictResult
-} from '../types/game.js';
+import { MatchState, PlayerState, GamePhase, ActorType, LocationType, ResourceType, ValueType, ActionCardType, ActorPlacement, ArgumentType, ConflictResult } from '../types/game.js';
 import { globalGasRelayer } from '../services/GasRelayer.js';
+import { prisma } from '../lib/prisma.js';
+import { ethers } from 'ethers';
 
 export function createInitialPlayerState(id: string, address?: string): PlayerState {
     return {
@@ -49,6 +48,29 @@ export class Match {
             conflictResults: [],
             eventLog: [`Match ${matchId} started. Turn 1 Distribution phase begins.`]
         };
+
+        // Seed dummy players and Match for the Prisma history pipeline
+        Promise.all([
+            prisma.player.upsert({
+                where: { walletAddress: player1Id },
+                update: {},
+                create: { walletAddress: player1Id, privyDid: player1Id }
+            }),
+            prisma.player.upsert({
+                where: { walletAddress: player2Id },
+                update: {},
+                create: { walletAddress: player2Id, privyDid: player2Id }
+            })
+        ]).then(([p1, p2]) => {
+            return prisma.match.create({
+                data: {
+                    id: matchId,
+                    status: "ACTIVE",
+                    player1Id: p1.id,
+                    player2Id: p2.id
+                }
+            });
+        }).catch(err => console.error("🚨 [Prisma DB Error] Match Init Failed:", err));
     }
 
     // Phase 2: Distribution Commit
@@ -129,6 +151,22 @@ export class Match {
                 // Safely submit the aggregated cheat-proof sequence to Avalanche
                 globalGasRelayer.commitTurnHash(this.state.matchId, this.state.currentTurn, p1Hash, p2Hash).catch(err => {
                     this.log(`GasRelayer execution failed: ${err.message}`);
+                });
+
+                // Take a permanent snapshot of the current state and Avalanche hashes into the database
+                const unifiedHash = ethers.keccak256(
+                    ethers.AbiCoder.defaultAbiCoder().encode(['string', 'string'], [p1Hash, p2Hash])
+                );
+
+                prisma.turn.create({
+                    data: {
+                        matchId: this.state.matchId,
+                        turnNumber: this.state.currentTurn,
+                        commitHash: unifiedHash,
+                        stateSnapshot: JSON.stringify(this.state)
+                    }
+                }).catch((err: any) => {
+                    console.error(`🚨 [Prisma DB Error] State Snapshot failed:`, err);
                 });
 
                 this.advanceToPhase(GamePhase.BETS);

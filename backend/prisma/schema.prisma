@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Player {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  privyDid      String   @unique
+  matchesPlayed Int      @default(0)
+  matchesWon    Int      @default(0)
+  vtBalance     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  matchesAsPlayer1 Match[] @relation("Player1Matches")
+  matchesAsPlayer2 Match[] @relation("Player2Matches")
+  wonMatches       Match[] @relation("WinnerMatches")
+}
+
+model Match {
+  id          String   @id @default(uuid())
+  status      String   // "ACTIVE", "COMPLETED", "ABANDONED"
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  player1Id   String
+  player1     Player   @relation("Player1Matches", fields: [player1Id], references: [id])
+  
+  player2Id   String
+  player2     Player   @relation("Player2Matches", fields: [player2Id], references: [id])
+
+  winnerId    String?
+  winner      Player?  @relation("WinnerMatches", fields: [winnerId], references: [id])
+
+  turns       Turn[]
+}
+
+model Turn {
+  id         String   @id @default(uuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id])
+  turnNumber Int
+  commitHash String?  // The Avalanche hash for web3 security
+  createdAt  DateTime @default(now())
+
+  stateSnapshot String? 
+}
