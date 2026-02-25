@@ -11,6 +11,7 @@ import { LocationSlot } from '@/components/board/LocationSlot';
 import { DraggableChip } from '@/components/tokens/DraggableChip';
 import { DraggableArgument } from '@/components/tokens/DraggableArgument';
 import { ArgumentSelector } from '@/components/board/ArgumentSelector';
+import { useFetchSkins } from '@/hooks/useFetchSkins';
 
 const VALID_LOCATIONS: Record<ActorType, LocationType[]> = {
   [ActorType.POLITIC]: [LocationType.UNIVERSITY, LocationType.SQUARE],
@@ -31,6 +32,9 @@ const locations = [
 export default function MetarchyGame() {
   const { ready, authenticated, login, user, logout } = usePrivy();
   const { socketId, isConnected, matchState, joinQueue, commitDistribution, commitBets, devForceAdvance, error } = useSocket();
+
+  // Initiate NFT fetch for the given wallet
+  useFetchSkins();
 
   if (!matchState) {
     return (

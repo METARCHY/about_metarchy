@@ -3,6 +3,7 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { ActorType } from '@/types/game';
+import { useSkinStore } from '@/store/useSkinStore';
 
 interface DraggableActorProps {
     id: string; // e.g. "hand-POLITIC" or "placed-POLITIC"
@@ -20,6 +21,8 @@ const getActorDetails = (type: ActorType) => {
 }
 
 export function DraggableActor({ id, actorType, inHand }: DraggableActorProps) {
+    const skinData = useSkinStore((state) => state.actorSkins[actorType]);
+
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: id,
         data: {
@@ -41,9 +44,18 @@ export function DraggableActor({ id, actorType, inHand }: DraggableActorProps) {
         ${inHand ? 'w-16 h-16 text-3xl' : 'w-12 h-12 text-2xl'} 
         ${details.color} rounded-xl flex items-center justify-center 
         shadow-lg border-2 ${details.border} cursor-grab active:cursor-grabbing 
-        group-hover:scale-110 group-active:scale-110 transition-transform
+        group-hover:scale-110 group-active:scale-110 transition-transform overflow-hidden relative
       `}>
-                {details.icon}
+                {skinData ? (
+                    <img
+                        src={skinData.imageUrl}
+                        alt={skinData.name}
+                        className="w-full h-full object-cover bg-slate-900 absolute inset-0 mix-blend-screen"
+                        draggable={false}
+                    />
+                ) : (
+                    details.icon
+                )}
             </div>
             {inHand && (
                 <span className="text-xs text-slate-400 mt-2 block uppercase font-bold tracking-wider">
