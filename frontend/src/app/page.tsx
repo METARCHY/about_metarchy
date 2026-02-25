@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ethers } from "ethers";
 import { LocationType, ActorType, ActorPlacement, ArgumentType, GamePhase, ResourceType } from '@/types/game';
 import { useSocket } from '@/contexts/SocketContext';
 import { DndContext, DragEndEvent, closestCenter, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
@@ -100,6 +101,8 @@ export default function MetarchyGame() {
     ActorType.ROBOT
   ]);
 
+  const [myTurnSalt, setMyTurnSalt] = useState<string | null>(null);
+
   // Local placement state for Bets Phase
   const [placedBets, setPlacedBets] = useState<Record<string, ResourceType>>({});
 
@@ -198,16 +201,27 @@ export default function MetarchyGame() {
   const handleLockPlacements = () => {
     if (!checkCanLock()) return;
 
+    // 1. Generate client-side secret salt for this turn
+    const salt = ethers.hexlify(ethers.randomBytes(32));
+    setMyTurnSalt(salt);
+
     // Convert local placements Record into the expected ActorPlacement format
     const payload: ActorPlacement[] = Object.entries(placements)
       .filter(([_, entry]) => entry !== null)
-      .map(([actorStr, entry]) => ({
-        actor: actorStr as ActorType,
-        location: entry!.location,
-        argument: entry!.argument!
-      }));
+      .map(([actorStr, entry]) => {
+        const argument = entry!.argument!;
+        // 2. Hash the argument and salt together
+        const argumentHash = ethers.keccak256(ethers.toUtf8Bytes(`${argument}-${salt}`));
 
-    commitDistribution(payload);
+        return {
+          actor: actorStr as ActorType,
+          location: entry!.location,
+          argumentHash,
+          argument // Temporarily still sending the raw argument until Phase 5 Reveal is built
+        };
+      });
+
+    commitDistribution({ placements: payload, turnSalt: salt });
   };
 
   const handleLockBets = () => {
@@ -275,7 +289,7 @@ export default function MetarchyGame() {
               } else {
                 myActorsHere = (myState?.actorsPlacements || [])
                   .filter(p => p.location === loc.id)
-                  .map(p => ({ actor: p.actor, argument: p.argument }));
+                  .map(p => ({ actor: p.actor, argument: p.argument || null }));
                 oppActorsHere = (oppState?.actorsPlacements || [])
                   .filter(p => p.location === loc.id)
                   .map(p => p.actor);
@@ -284,20 +298,19 @@ export default function MetarchyGame() {
               const confResult = isResolution ? matchState.conflictResults?.find(cr => cr.location === loc.id) : null;
 
               return (
-                <div key={loc.id} className="relative group/loc flex flex-col items-center justify-center">
-                  <LocationSlot locationId={loc.id} name={loc.name} type={loc.type} color={loc.color}>
+                <React.Fragment key={loc.id}>
+                  <div className="relative group/loc flex flex-col items-center justify-center">
+                    <LocationSlot locationId={loc.id} name={loc.name} type={loc.type} color={loc.color}>
 
-                    {/* Render Opponent's Actors */}
-                    <div className="absolute top-1 left-1 flex flex-wrap gap-1 opacity-50 contrast-50 pointer-events-none scale-[0.6] origin-top-left z-0 w-[150%]">
-                      {oppActorsHere.map(oppAct => (
-                        <div key={`opp-${oppAct}`} className="relative">
-                          <DraggableActor id={`opp-${oppAct}`} actorType={oppAct} inHand={false} />
-                        </div>
-                      ))}
-                    </div>
+                      {/* Render Opponent's Actors */}
+                      <div className="absolute top-1 left-1 flex flex-wrap gap-1 opacity-50 contrast-50 pointer-events-none scale-[0.6] origin-top-left z-0 w-[150%]">
+                        {oppActorsHere.map(oppAct => (
+                          <div key={`opp-${oppAct}`} className="relative">
+                            <DraggableActor id={`opp-${oppAct}`} actorType={oppAct} inHand={false} />
+                          </div>
+                        ))}
+                      </div>
 
-                    {/* Render My Actors */}
-                    <div className="relative z-10 flex flex-wrap gap-2 items-center justify-center h-full w-full pt-4">
                       {myActorsHere.map(myAct => {
                         const betOnThisActor = placedBets[myAct.actor] || null;
 
@@ -321,9 +334,8 @@ export default function MetarchyGame() {
                           </div>
                         );
                       })}
-                    </div>
-                  </LocationSlot>
-
+                    </LocationSlot>
+                  </div>
                   {/* Anti-isometric wrappers for UI Popups (Keeps UI flat to camera) */}
                   <div className="absolute top-0 left-0 w-full h-full pointer-events-none [transform:rotateX(-25deg)] flex items-center justify-center z-50">
                     {isDistribution && myActorsHere.map((myAct, index) => {
@@ -355,25 +367,25 @@ export default function MetarchyGame() {
                     {confResult && (
                       <div className="absolute top-[-30px] pointer-events-auto bg-slate-900/95 border border-slate-700 rounded-xl px-4 py-3 shadow-2xl flex flex-col items-center z-[100] backdrop-blur-md w-max animate-in fade-in zoom-in duration-500 hover:scale-105 transition-transform">
                         <span className="text-[10px] uppercase tracking-widest font-black mb-1 bg-gradient-to-r from-red-400 to-orange-400 text-transparent bg-clip-text">Conflict</span>
-                        {confResult.winnerId === 'TIE' ? (
+                        {confResult?.winnerId === 'TIE' ? (
                           <div className="text-center">
                             <div className="text-lg mb-1">⚔️ TIE ⚔️</div>
                             <div className="text-[10px] text-slate-400">Mutual Destruction</div>
                           </div>
-                        ) : confResult.winnerId ? (
+                        ) : confResult?.winnerId ? (
                           <div className="text-center">
                             <div className={`text-md font-bold mb-1 ${confResult.winnerId === socketId ? 'text-blue-400' : 'text-red-400'}`}>
                               {confResult.winnerId === socketId ? '🌟 VICTORIOUS' : '💀 DEFEATED'}
                             </div>
                             <div className="flex items-center space-x-2 text-xs pt-1 border-t border-slate-700">
                               <span className="text-slate-300">Reward:</span>
-                              <span className="text-emerald-400 font-bold">+{confResult.rewardCount} {confResult.rewardType}</span>
+                              <span className="text-emerald-400 font-bold">+{confResult?.rewardCount} {confResult?.rewardType}</span>
                             </div>
                           </div>
                         ) : (
                           <div className="text-center">
                             <div className="text-emerald-400 text-xs font-bold pt-1">
-                              Secured +{confResult.rewardCount} {confResult.rewardType}
+                              Secured +{confResult?.rewardCount} {confResult?.rewardType}
                             </div>
                           </div>
                         )}
@@ -381,114 +393,120 @@ export default function MetarchyGame() {
                     )}
 
                   </div>
-                </div>
+                </React.Fragment>
               );
             })}
           </div>
         </div>
 
         {/* The Dock (Dynamic based on Phase) */}
-        {!myState?.hasCommittedDistribution && isDistribution && (
-          <div className="absolute bottom-8 w-full max-w-4xl h-36 bg-slate-900/80 border border-slate-800 backdrop-blur-md rounded-2xl flex flex-col justify-center items-center shadow-2xl z-10 px-8">
-            <div className="flex w-full justify-between items-center px-4 pt-2">
-              <span className="text-slate-400 font-mono text-sm tracking-widest uppercase">Distribution (Hand)</span>
+        {
+          !myState?.hasCommittedDistribution && isDistribution && (
+            <div className="absolute bottom-8 w-full max-w-4xl h-36 bg-slate-900/80 border border-slate-800 backdrop-blur-md rounded-2xl flex flex-col justify-center items-center shadow-2xl z-10 px-8">
+              <div className="flex w-full justify-between items-center px-4 pt-2">
+                <span className="text-slate-400 font-mono text-sm tracking-widest uppercase">Distribution (Hand)</span>
 
-              <div className="flex items-center space-x-4">
-                {!canLock && (
-                  <span className="text-xs text-orange-400 opacity-80">
-                    {hand.length > 0 ? "Place all actors." : "Give each actor 1 argument."}
-                  </span>
+                <div className="flex items-center space-x-4">
+                  {!canLock && (
+                    <span className="text-xs text-orange-400 opacity-80">
+                      {hand.length > 0 ? "Place all actors." : "Give each actor 1 argument."}
+                    </span>
+                  )}
+                  <button
+                    disabled={!canLock}
+                    onClick={handleLockPlacements}
+                    className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-all ${canLock ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                  >
+                    Lock Placements
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 w-full flex items-center justify-center space-x-6">
+                {hand.length > 0 ? (
+                  <>
+                    {hand.includes(ActorType.POLITIC) && <DraggableActor id={`hand-${ActorType.POLITIC}`} actorType={ActorType.POLITIC} inHand={true} />}
+                    {hand.includes(ActorType.SCIENTIST) && <DraggableActor id={`hand-${ActorType.SCIENTIST}`} actorType={ActorType.SCIENTIST} inHand={true} />}
+                    {hand.includes(ActorType.ARTIST) && <DraggableActor id={`hand-${ActorType.ARTIST}`} actorType={ActorType.ARTIST} inHand={true} />}
+                    {hand.includes(ActorType.ROBOT) && <DraggableActor id={`hand-${ActorType.ROBOT}`} actorType={ActorType.ROBOT} inHand={true} />}
+                  </>
+                ) : (
+                  <>
+                    {argHand.includes(ArgumentType.ROCK) && <DraggableArgument id={`hand-arg-${ArgumentType.ROCK}`} argumentType={ArgumentType.ROCK} inHand={true} />}
+                    {argHand.includes(ArgumentType.PAPER) && <DraggableArgument id={`hand-arg-${ArgumentType.PAPER}`} argumentType={ArgumentType.PAPER} inHand={true} />}
+                    {argHand.includes(ArgumentType.SCISSORS) && <DraggableArgument id={`hand-arg-${ArgumentType.SCISSORS}`} argumentType={ArgumentType.SCISSORS} inHand={true} />}
+                    {argHand.includes(ArgumentType.DUMMY) && <DraggableArgument id={`hand-arg-${ArgumentType.DUMMY}`} argumentType={ArgumentType.DUMMY} inHand={true} />}
+                    {argHand.length === 0 && <span className="text-slate-500 italic">All arguments deployed!</span>}
+                  </>
                 )}
+              </div>
+
+              <span className="absolute bottom-2 text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                {hand.length > 0 ? "1. Drag Actors to valid locations on the board" : "2. Drag an Argument Token onto each Actor"}
+              </span>
+            </div>
+          )
+        }
+
+        {
+          isBets && (
+            <div className="absolute bottom-8 w-full max-w-4xl h-40 bg-slate-900/80 border border-slate-800 backdrop-blur-md rounded-2xl flex flex-col justify-center items-center shadow-2xl z-10 px-8">
+              <div className="flex w-full justify-between items-center px-4 pt-2">
+                <span className="text-slate-400 font-mono text-sm tracking-widest uppercase">Phase 3: Place Bets (Optional)</span>
                 <button
-                  disabled={!canLock}
-                  onClick={handleLockPlacements}
-                  className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-all ${canLock ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                  disabled={myState?.hasCommittedBets}
+                  onClick={handleLockBets}
+                  className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-all ${!myState?.hasCommittedBets ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
                 >
-                  Lock Placements
+                  {myState?.hasCommittedBets ? 'Waiting for opponent...' : 'Lock Bets'}
                 </button>
               </div>
-            </div>
 
-            <div className="flex-1 w-full flex items-center justify-center space-x-6">
-              {hand.length > 0 ? (
-                <>
-                  {hand.includes(ActorType.POLITIC) && <DraggableActor id={`hand-${ActorType.POLITIC}`} actorType={ActorType.POLITIC} inHand={true} />}
-                  {hand.includes(ActorType.SCIENTIST) && <DraggableActor id={`hand-${ActorType.SCIENTIST}`} actorType={ActorType.SCIENTIST} inHand={true} />}
-                  {hand.includes(ActorType.ARTIST) && <DraggableActor id={`hand-${ActorType.ARTIST}`} actorType={ActorType.ARTIST} inHand={true} />}
-                  {hand.includes(ActorType.ROBOT) && <DraggableActor id={`hand-${ActorType.ROBOT}`} actorType={ActorType.ROBOT} inHand={true} />}
-                </>
-              ) : (
-                <>
-                  {argHand.includes(ArgumentType.ROCK) && <DraggableArgument id={`hand-arg-${ArgumentType.ROCK}`} argumentType={ArgumentType.ROCK} inHand={true} />}
-                  {argHand.includes(ArgumentType.PAPER) && <DraggableArgument id={`hand-arg-${ArgumentType.PAPER}`} argumentType={ArgumentType.PAPER} inHand={true} />}
-                  {argHand.includes(ArgumentType.SCISSORS) && <DraggableArgument id={`hand-arg-${ArgumentType.SCISSORS}`} argumentType={ArgumentType.SCISSORS} inHand={true} />}
-                  {argHand.includes(ArgumentType.DUMMY) && <DraggableArgument id={`hand-arg-${ArgumentType.DUMMY}`} argumentType={ArgumentType.DUMMY} inHand={true} />}
-                  {argHand.length === 0 && <span className="text-slate-500 italic">All arguments deployed!</span>}
-                </>
-              )}
+              <div className="flex-1 w-full flex items-center justify-center space-x-12">
+                <DraggableChip
+                  id={`hand-${ResourceType.PRODUCTION}`}
+                  resourceType={ResourceType.PRODUCTION}
+                  inHand={true}
+                  count={myState?.resourceTokens[ResourceType.PRODUCTION] || 0}
+                />
+                <DraggableChip
+                  id={`hand-${ResourceType.ELECTRICITY}`}
+                  resourceType={ResourceType.ELECTRICITY}
+                  inHand={true}
+                  count={myState?.resourceTokens[ResourceType.ELECTRICITY] || 0}
+                />
+                <DraggableChip
+                  id={`hand-${ResourceType.RECYCLING}`}
+                  resourceType={ResourceType.RECYCLING}
+                  inHand={true}
+                  count={myState?.resourceTokens[ResourceType.RECYCLING] || 0}
+                />
+              </div>
+              <span className="absolute bottom-2 text-xs text-slate-500">Drag a resource token onto one of your Actors to play a bet.</span>
             </div>
+          )
+        }
 
-            <span className="absolute bottom-2 text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-              {hand.length > 0 ? "1. Drag Actors to valid locations on the board" : "2. Drag an Argument Token onto each Actor"}
-            </span>
-          </div>
-        )}
-
-        {isBets && (
-          <div className="absolute bottom-8 w-full max-w-4xl h-40 bg-slate-900/80 border border-slate-800 backdrop-blur-md rounded-2xl flex flex-col justify-center items-center shadow-2xl z-10 px-8">
-            <div className="flex w-full justify-between items-center px-4 pt-2">
-              <span className="text-slate-400 font-mono text-sm tracking-widest uppercase">Phase 3: Place Bets (Optional)</span>
-              <button
-                disabled={myState?.hasCommittedBets}
-                onClick={handleLockBets}
-                className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-all ${!myState?.hasCommittedBets ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
-              >
-                {myState?.hasCommittedBets ? 'Waiting for opponent...' : 'Lock Bets'}
-              </button>
+        {
+          isResolution && (
+            <div className="absolute bottom-8 w-full max-w-4xl h-40 bg-slate-900/80 border border-slate-800 backdrop-blur-md rounded-2xl flex flex-col justify-center items-center shadow-2xl z-10 px-8">
+              <div className="flex w-full justify-between items-center px-4 pt-2">
+                <span className="text-slate-400 font-mono text-sm tracking-widest uppercase">Phase 5: Resolution</span>
+                <button
+                  onClick={devForceAdvance}
+                  className="px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                >
+                  Next Turn
+                </button>
+              </div>
+              <div className="flex-1 w-full flex flex-col items-center justify-center">
+                <span className="text-2xl mb-2">🏆</span>
+                <span className="text-sm text-slate-300">Conflicts have been resolved! Review the results on the board.</span>
+              </div>
             </div>
-
-            <div className="flex-1 w-full flex items-center justify-center space-x-12">
-              <DraggableChip
-                id={`hand-${ResourceType.PRODUCTION}`}
-                resourceType={ResourceType.PRODUCTION}
-                inHand={true}
-                count={myState?.resourceTokens[ResourceType.PRODUCTION] || 0}
-              />
-              <DraggableChip
-                id={`hand-${ResourceType.ELECTRICITY}`}
-                resourceType={ResourceType.ELECTRICITY}
-                inHand={true}
-                count={myState?.resourceTokens[ResourceType.ELECTRICITY] || 0}
-              />
-              <DraggableChip
-                id={`hand-${ResourceType.RECYCLING}`}
-                resourceType={ResourceType.RECYCLING}
-                inHand={true}
-                count={myState?.resourceTokens[ResourceType.RECYCLING] || 0}
-              />
-            </div>
-            <span className="absolute bottom-2 text-xs text-slate-500">Drag a resource token onto one of your Actors to play a bet.</span>
-          </div>
-        )}
-
-        {isResolution && (
-          <div className="absolute bottom-8 w-full max-w-4xl h-40 bg-slate-900/80 border border-slate-800 backdrop-blur-md rounded-2xl flex flex-col justify-center items-center shadow-2xl z-10 px-8">
-            <div className="flex w-full justify-between items-center px-4 pt-2">
-              <span className="text-slate-400 font-mono text-sm tracking-widest uppercase">Phase 5: Resolution</span>
-              <button
-                onClick={devForceAdvance}
-                className="px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-              >
-                Next Turn
-              </button>
-            </div>
-            <div className="flex-1 w-full flex flex-col items-center justify-center">
-              <span className="text-2xl mb-2">🏆</span>
-              <span className="text-sm text-slate-300">Conflicts have been resolved! Review the results on the board.</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </DndContext>
+          )
+        }
+      </div >
+    </DndContext >
   );
 }

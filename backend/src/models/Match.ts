@@ -50,7 +50,7 @@ export class Match {
     }
 
     // Phase 2: Distribution Commit
-    public commitDistribution(playerId: string, actorsPlacements: ActorPlacement[]) {
+    public commitDistribution(playerId: string, actorsPlacements: ActorPlacement[], turnSalt?: string) {
         if (this.state.currentPhase !== GamePhase.DISTRIBUTION) {
             throw new Error("Cannot commit distribution outside of Distribution phase.");
         }
@@ -61,6 +61,9 @@ export class Match {
         if (actorsPlacements.length !== 4) throw new Error("Must place exactly 4 actors.");
 
         player.actorsPlacements = actorsPlacements;
+        if (turnSalt) {
+            player.turnSalt = turnSalt;
+        }
         player.hasCommittedDistribution = true;
 
         this.log(`Player ${playerId} committed distribution.`);

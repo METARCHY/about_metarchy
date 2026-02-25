@@ -24,12 +24,12 @@ export function setupSocketHandlers(io: Server) {
             }
         });
 
-        socket.on('commit_distribution', (payload: { matchId: string, placements: ActorPlacement[] }) => {
+        socket.on('commit_distribution', (payload: { matchId: string, placements: ActorPlacement[], turnSalt?: string }) => {
             const match = globalMatchmaker.getMatch(payload.matchId);
             if (!match) return socket.emit('error', 'Match not found');
 
             try {
-                match.commitDistribution(socket.id, payload.placements);
+                match.commitDistribution(socket.id, payload.placements, payload.turnSalt);
                 io.to(payload.matchId).emit('match_updated', match.state);
             } catch (err: any) {
                 socket.emit('error', err.message);

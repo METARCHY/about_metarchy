@@ -12,7 +12,7 @@ interface SocketContextContext {
     isConnected: boolean;
     matchState: MatchState | null;
     joinQueue: () => void;
-    commitDistribution: (placements: any) => void;
+    commitDistribution: (payload: { placements: any[]; turnSalt: string }) => void;
     commitBets: (bets: any) => void;
     commitActions: (actions: any) => void;
     devForceAdvance: () => void;
@@ -72,9 +72,9 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const commitDistribution = (placements: any) => {
+    const commitDistribution = (payload: { placements: any[]; turnSalt: string }) => {
         if (socket && matchState) {
-            socket.emit("commit_distribution", { matchId: matchState.matchId, placements });
+            socket.emit("commit_distribution", { matchId: matchState.matchId, ...payload });
         }
     };
 

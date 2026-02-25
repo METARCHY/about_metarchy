@@ -58,7 +58,8 @@ export type ArgumentQueue = [ArgumentType, ArgumentType, ArgumentType];
 export interface ActorPlacement {
     actor: ActorType;
     location: LocationType;
-    argument: ArgumentType;
+    argument?: ArgumentType;
+    argumentHash?: string;
     bet?: ResourceType; // Optional bet attached to this actor
 }
 
@@ -85,6 +86,7 @@ export interface PlayerState {
     valueTokens: Record<ValueType, number>;
     victoryPoints: number;
     actionCards: ActionCardType[];
+    turnSalt?: string; // Revealed in Phase 5
 
     // Phase locks
     hasCommittedDistribution: boolean;
