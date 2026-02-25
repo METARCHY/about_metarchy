@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ethers } from "ethers";
+import { usePrivy } from '@privy-io/react-auth';
 import { LocationType, ActorType, ActorPlacement, ArgumentType, GamePhase, ResourceType } from '@/types/game';
 import { useSocket } from '@/contexts/SocketContext';
 import { DndContext, DragEndEvent, closestCenter, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
@@ -28,6 +29,7 @@ const locations = [
 ];
 
 export default function MetarchyGame() {
+  const { ready, authenticated, login, user, logout } = usePrivy();
   const { socketId, isConnected, matchState, joinQueue, commitDistribution, commitBets, devForceAdvance, error } = useSocket();
 
   if (!matchState) {
@@ -55,24 +57,50 @@ export default function MetarchyGame() {
           )}
 
           <div className="space-y-4 pt-8">
-            <button
-              onClick={joinQueue}
-              disabled={!isConnected}
-              className={`
-                w-full py-4 rounded-xl font-bold text-lg tracking-widest uppercase
-                transition-all duration-300 relative overflow-hidden group
-                ${isConnected
-                  ? 'bg-blue-600 hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] hover:-translate-y-1'
-                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'}
-              `}
-            >
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-              <span className="relative">
-                {!isConnected ? 'Connecting to Server...' : 'Enter Matchmaking'}
-              </span>
-            </button>
+            {/* Logic: Wait for Privy to be ready, then require login, THEN allow entering queue */}
+            {!ready ? (
+              <button
+                disabled
+                className="w-full py-4 rounded-xl font-bold text-lg tracking-widest uppercase bg-slate-800 text-slate-500 cursor-not-allowed"
+              >
+                Initializing Secure Enclave...
+              </button>
+            ) : !authenticated ? (
+              <button
+                onClick={login}
+                className="w-full py-4 rounded-xl font-bold text-lg tracking-widest uppercase bg-purple-600 hover:bg-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group text-white"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                <span className="relative">Connect Credentials (Login)</span>
+              </button>
+            ) : (
+              // Authenticated but maybe not connected to websocket yet
+              <div className="space-y-2">
+                <button
+                  onClick={joinQueue}
+                  disabled={!isConnected}
+                  className={`
+                    w-full py-4 rounded-xl font-bold text-lg tracking-widest uppercase
+                    transition-all duration-300 relative overflow-hidden group
+                    ${isConnected
+                      ? 'bg-blue-600 hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] hover:-translate-y-1 text-white'
+                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'}
+                  `}
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                  <span className="relative">
+                    {!isConnected ? 'Locating Server...' : 'Enter Matchmaking'}
+                  </span>
+                </button>
 
-            <div className="flex items-center justify-center space-x-2 text-sm text-slate-500">
+                <div className="flex items-center justify-between text-xs text-slate-500 px-2 pt-2">
+                  <span>Welcome, {user?.email?.address || user?.wallet?.address?.substring(0, 6) + "..." || "Agent"}</span>
+                  <button onClick={logout} className="hover:text-slate-300 underline">Logout</button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-center space-x-2 text-sm text-slate-500 pt-4">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
               <span>{isConnected ? 'Server Online' : 'Server Offline'}</span>
             </div>
