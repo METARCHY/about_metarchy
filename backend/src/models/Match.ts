@@ -1,7 +1,9 @@
+import { v4 as uuidv4 } from 'uuid';
 import {
     MatchState, PlayerState, GamePhase, ActorType, LocationType,
-    ResourceType, ValueType, ActionCardType, ActorPlacement, ArgumentType
+    ResourceType, ValueType, ActionCardType, ActorPlacement, ArgumentType, ConflictResult
 } from '../types/game.js';
+import { globalGasRelayer } from '../services/GasRelayer.js';
 
 export function createInitialPlayerState(id: string, address?: string): PlayerState {
     return {
@@ -119,6 +121,16 @@ export class Match {
         const allPlayers = Object.values(this.state.players) as PlayerState[];
         if (this.state.currentPhase === GamePhase.DISTRIBUTION) {
             if (allPlayers.every(p => p.hasCommittedDistribution)) {
+
+                // Construct the combined hash representations from the Actors
+                const p1Hash = allPlayers[0].actorsPlacements.map(p => p.argumentHash || '').join('');
+                const p2Hash = allPlayers[1].actorsPlacements.map(p => p.argumentHash || '').join('');
+
+                // Safely submit the aggregated cheat-proof sequence to Avalanche
+                globalGasRelayer.commitTurnHash(this.state.matchId, this.state.currentTurn, p1Hash, p2Hash).catch(err => {
+                    this.log(`GasRelayer execution failed: ${err.message}`);
+                });
+
                 this.advanceToPhase(GamePhase.BETS);
             }
         } else if (this.state.currentPhase === GamePhase.BETS) {
