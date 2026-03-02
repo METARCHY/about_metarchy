@@ -103,7 +103,7 @@ Deck of Event Cards contains 7 cards:
 - **Earth Hour** (Each Player discards any amount of Electricity Tokens, but players don't know how many resources other players discarded. After all Players have discarded the desired amount of Electricity Tokens (the desired number may be zero), information about how many resources each player has discarded becomes publicly known. The number of Electricity Tokens discarded is compared. The Player who has discarded more Electricity Tokens receives a random Action Card.)
 - **Prevent Eco-Crisis** (Each Player discards any amount of Recycling Tokens, but players don't know how many resources other players discarded. After all Players have discarded the desired number of Recycling Tokens (the desired number may be zero), information about how many resources each player has discarded becomes publicly known. The number of Recycling Tokens discarded is compared. The Player who has discarded more Recycling Tokens receives a random Action Card.)
 
-If two or more players meet the conditions specified on the Event Card, the winner is determined by automatically drawing from the players' pre-committed **Argument Queue** (a sequence of RSP Arguments used instantly to resolve ties without halting the game).
+If two or more players meet the conditions specified on the Event Card, the winner is determined by a quick Rock-Scissors-Paper resolution.
 ---
 
 ## ⏳ Game Flow & Phases
@@ -112,8 +112,7 @@ Depending on the player count, the game spans a specific number of Turns:
 - **3 Players:** 6 Turns
 - **4 Players (2vs2):** Short game 4 Turns, Long game 8 Turns
 
-
-Every Turn is divided into **5 Phases**, completed in order:
+Every Turn is divided into **6 Phases**, completed in order:
 
 ### 1️⃣ Phase 1 - Event (Starts from Turn 2)
 An **Event Card** is randomly revealed from the deck. Players must react based on the card's text. 
@@ -126,21 +125,20 @@ This is a hidden information phase. All players simultaneously distribute their 
 - Players assign their 4 Actors to various Locations on the board.
 - Each Actor MUST be paired with an **Argument**.
 
-
 ### 3️⃣ Phase 3 - Bets
-All **Actors** and their **Locations** are revealed. (The *Arguments/RSP-Tokens* remain hidden).
+All **Actors** and their **Locations** are revealed. (The *Arguments* remain hidden).
 - Players can now see where Conflicts will occur (A Conflict happens when two or more Actors of same type end up in the same Location).
 - Players may optionally attach **Resource Tokens** to their Actors as a hidden "Bet on the Conflict Outcome".
-Nobody knows which Arguments are on the Actors. Player can add only one bet on each Actor
+- Nobody knows which Arguments are on the Actors. Player can add only one bet on each Actor
 
 ### 4️⃣ Phase 4 - Actions
-All **Actors** and their **Locations** are revealed. (The *Arguments/RSP-Tokens and Bets* remain hidden).
+All **Actors** and their **Locations** are revealed. (The *Arguments and Bets* remain hidden).
 - All players simultaneously commit which Action Cards they wish to play (they can play any amount of cards).
 - After all commits are locked, the game automatically executes the Action Cards in the following strict priority sequence:
-  1. **Block Locations First:** Construction Work, Reconstruction, Student Protests, Sabotage, Cable Stolen, Environmental Protests take effect.
-  2. **Relocations Second:** Actors are moved (useful for escaping blocked Locations).
-  3. **Value Exchanges Third:** Change Value Cards are executed to swap values based on the final board configuration.
-
+  1. Action Cards **Block Locations:** Construction Work, Reconstruction, Student Protests, Sabotage, Cable Stolen, Environmental Protests take effect.
+  2. Action Cards **Relocations:** Actors are moved (useful for escaping blocked Locations).
+  3. Action Cards **Value Exchanges:** Player can exchange Power, Knowledge or Art to Power, Knowledge or Art of another chosen player.
+     
 ### 5️⃣ Phase 5 - Conflict & Resolution
 Identifying Conflicts between Actors:
 - If two or more Actors of the same type are in the same Location, a Conflict occurs between these Actors.
@@ -153,14 +151,13 @@ Identifying Conflicts between Actors:
     - All Resource Tokens used as "Conflict Outcome Bets" are not returned, regardless of the Conflict's outcome.
 - **Victory:** The winning Actor survives and claims the Location's Reward (Value Tokens or Resource Tokens depending on the Actor type and Location).
 - **Defeat:** Losing Actors are immediately removed from the Location.
-- **Draw:** For Politicians: a resolution loop occurs instantly using the next Arguments in their **Argument Queue** (2nd, then 3rd) until only the Winners remain in the Location. (If an Electricity Bet forces a re-roll on any Actor, the queue is also used).
+- **Draw:** For Politicians: a quick Rock-Scissors-Paper resolution until only the Winners remain in the Location.
 For Scientists: no needs to resolve, all Scientists remain in the location.
 For Artists: no needs to resolve, all Artists leave the location.
 
-Players recive Value Tokens for their Actors remaining in the Location, and Rescourse Tokens for Robots in the locations (3 units if there is only one robot, and only 1 unit if there are more than one robot)
+Players recive Value Tokens for their Actors remaining in the Location, and Rescourse Tokens for Robots in the locations (3 units if there is only one robot, and only 1 unit if there are more than one robot in the Location)
 
-
-### 6️⃣ Phase 6 - Exchange
+### 6️⃣ Phase 6 - Market
 Players may purchase items.
 - Players may choose to spend Production + Electricity + Recycling Tokens (1 unit of each) to buy random Action Card from the deck.
 
