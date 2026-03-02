@@ -124,7 +124,7 @@ An **Event Card** is randomly revealed from the deck. Players must react based o
 ### 2️⃣ Phase 2 - Distribution
 This is a hidden information phase. All players simultaneously distribute their Actors.
 - Players assign their 4 Actors to various Locations on the board.
-- Each Actor MUST be paired with an **Argument Queue** (a sequence of 3 RSP-Tokens). The first one is the active Argument. The second and third are reserves used automatically by the game server if a tie or a re-roll occurs.
+- Each Actor MUST be paired with an **Argument**.
 
 
 ### 3️⃣ Phase 3 - Bets
