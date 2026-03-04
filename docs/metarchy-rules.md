@@ -171,5 +171,5 @@ Players may purchase Action Card.
 - Players may choose to spend Production + Electricity + Recycling (1 unit of each) to buy a random Action Card from the deck.
 
 The Turn ends immediately after Market Phase, and next turn starts from Phase 1.
-If it was the final Turn, game ends after Conflict Resolution Phase, and players count their Victory Points to determine the ultimate winner!
-If two or more players have the same amount of Victory Points, they play one more Turn.
+- If it was the final Turn, game ends after Conflict Resolution Phase, and players count their Victory Points to determine the ultimate winner!
+- If two or more players have the same amount of Victory Points, they play one more Turn.
