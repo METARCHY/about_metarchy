@@ -43,32 +43,38 @@ The board consists of 6 distinct Locations where Conflicts are happening:
 ### 3. Actors (4 Types per Player)
 Actors are sent to Locations to create values.
 - 👔 **Politician** (Players can only send Politician to the Square and University locations.)
-A Politician in the Square or University location creates the Value - Power Token.
-If two or more Politicians are in the Square or University location, a Conflict occurs between the Politicians.
-A Conflict between Politicians is resolved via a quick Rock-Scissors-Paper resolution: Those who Win - stay in the location, those who Lose - leave the location.
-If a Conflict between Politicians results in a Draw, resolve the Conflict again via a quick Rock-Scissors-Paper resolution. This continues until only one Politician remains in the location.
-Only the player who owns the Politician remaining in the location receives the Value - Power Token.
+  - A Politician in the Square or University location creates the Value - Power.
+  - If two or more Politicians are in the Square or University Location, a Conflict occurs between the Politicians.
+  - For each Politician, the Conflict Outcome can be Win, Lose or Draw.
+  - If Outcome is Win - Politician returns to Player-owner with Value Power.
+  - If Outcome is Lose - Politician returns to Player-owner without anything. 
+  - If Outcome is Draw, players need to Resolve the Conflict until Outcome of the Conflict Win-Lose. 
 - 🧑🔬 **Scientist** (Players can only send Scientist to the Theater and University Locations.)
-A Scientist in the Theater or University Location produces the Value - Knowledge Token.
-If two or more Scientists are in the Theater or University Location, a Conflict occurs between the Scientists.
-A Conflict between Scientists is resolved via a quick Rock-Scissors-Paper resolution: Those who Win - stay in the location, those who Lose - leave the location.
-If a Conflict between Scientists results in a Draw, all Scientists Actors remain in the Location, and the Conflict no longer occurs.
-All Players who own Actor - Scientist remaining in the Location receive the Value - Knowledge Token.
+  - A Scientist in the Theater or University Location produces the Value - Knowledge.
+  - If two or more Scientists are in the Theater or University Location, a Conflict occurs between the Scientists.
+  - For each Scientist, the Conflict Outcome can be Win, Lose or Draw.
+  - If Outcome is Win - Scientist returns to Player-owner with Value Knowledge.
+  - If Outcome is Lose - Scientist returns to Player-owner without anything. 
+  - If Outcome is Draw, players don't need to Resolve the Conflict. All Scientists return to Player-owners with Value Knowledge. ("Draw between Scientists" is the same as "All Scientists Win")
 - 🧑🎨 **Artist** (Players can only send Artist to the Theater and Square Locations.)
-An Artist in the Theater or Square Location creates the Value - Art Token.
-If two or more Artists are in the Theater or Square Location, a Conflict occurs between the Artists.
-A Conflict between Artists is resolved via a quick Rock-Scissors-Paper resolution: Those who Win - stay in the location, those who Lose - leave the location.
-If a Conflict between Artists results in a Draw, all Actors and Artists leave the Location, and players don't receive the Value - Art Token.
-- 🤖 **Robot** (Players can send an Actor-Robot to any of three Locations: Factory, Power Plant, or Dump.
-A Robot in the Factory Location produces three units of rescourses - Product.
-A Robot in the Power Plant Location produces three units of rescourses - Electricity.
-A Robot in the Dump Location produces three units of rescourses - Recycling.
-If two or more Actor-Robots are in the Factory, Power Plant, or Dump Location, a Conflict occurs between the Robots.
-A Conflict between Robots is resolved via a quick Rock-Scissors-Paper resolution: Those who Win - stay in the location, those who Lose - leave the location.
-If a Conflict between Robots is resolved with a Draw, all Actor-Robots remain in the Location, and the Conflict no longer occurs and players who own Actors - Robots that remain in the Location - receive rescourses - Product/Electricity/Recycling (depending on the Location), but in the amount of one unit, not three units.)
+  - An Artist in the Theater or Square Location creates the Value - Art.
+  - If two or more Artists are in the Theater or Square Location, a Conflict occurs between the Artists.
+  - For each Artist, the Conflict Outcome can be Win, Lose or Draw.
+  - If Outcome is Win - Artist returns to Player-owner with Value Art.
+  - If Outcome is Lose - Artist returns to Player-owner without anything. 
+  - If Outcome is Draw, players don't need to Resolve the Conflict. All Artists return to Player-owners without anything. ("Draw between Artists" is the same as "All Artists Lose")
+- 🤖 **Robot** (Players can send an Actor-Robot to these Locations: Factory, Power Plant, or Dump.)
+  - A Robot in the Factory Location produces three units of Rescourses - Product.
+  - A Robot in the Power Plant Location produces three units of Rescourses - Electricity.
+  - A Robot in the Dump Location produces three units of Rescourses - Recycling.
+  - If two or more Actor-Robots are in the Factory, Power Plant, or Dump Location, a Conflict occurs between the Robots.
+  - For each Robot, the Conflict Outcome can be Win, Lose or Draw.
+  - If Outcome is Win - Robot returns to Player-owner with 3 Resources of Product/Electricity/Recycling (depending on the Location).
+  - If Outcome is Lose - Robot returns to Player-owner without anything. 
+  - If Outcome is Draw - Robot returns to Player-owner with 1 Resource of Product/Electricity/Recycling (depending on the Location).
 
 ### 4. Arguments (4 Types)
-Every Actor needs to have an Argument when is sent to a Location. Other players don't knowwhich Actors and which Argument you chose.
+When Player send an Actor to Location, Player must give an Argument to Actor.
 - 🪨 **Rock** *(Loses to Paper. Wins against Scissors and Dummy. Draws against Rock).*
 - ✂️ **Scissors** *(Loses to Rock. Wins against Paper and Dummy. Draws against Scissors).*
 - 📄 **Paper** *(Loses to Scissors. Wins against Rock and Dummy. Draws against Paper).*
@@ -79,13 +85,12 @@ Required to form Victory Points. 1 Power + 1 Art + 1 Knowledge = 1 Victory Point
 - 👑 **Power** (Created by Politics in Square/University)
 - 🎨 **Art** (Created by Artists in Theater/Square)
 - 📖 **Knowledge** (Created by Scientists in University/Theater)
-- ⭐ **Fame** (Player can get it in the Event Phase. Fame is used as a joker: can play the role of any other Value.)
 
 ### 6. Resources
-Used to place bets on conflicts and to purchase Action cards.
-- ⚙️ **Production** (Used to bet on "Win". If Outcome of Conflict for Actor is Win, this Actor will bring to Player one additional Value or Resource, depending on the Actor the Player bid on.)
-- 🔋 **Electricity** (Used to bet on "Lose". If Outcome of Conflict for Actor is Lose, then the Conflict Resolution need to be done one more time.)
-- ♻️ **Recycling** (Used to bet on "Draw". If Outcome of Conflict for Actor is Draw, then count it as a Win for this Actor.)
+Used to add bets on Conflict Outcome.
+- ⚙️ **Production** (Used to bet on "Win". If the Conflict Outcome for Actor is Win, this Actor will return to Player-owner with one more additional Value or Resource, depending on the Actor.)
+- 🔋 **Electricity** (Used to bet on "Lose". If the Conflict Outcome for Actor is Lose, then Resolve the Conflict one more time.)
+- ♻️ **Recycling** (Used to bet on "Draw". If the Conflict Outcome for Actor is Draw, then count Outcome as a Win for this Actor.)
 
 ### 7. Action Cards
 Action cards are powerful, single-use items that can dramatically alter the game state. They are purchased during Market Phase using a combination of Resources.
@@ -169,7 +174,6 @@ After, Players count amount of Values and Resources, and go to the next Phase.
 ### Market Phase 
 Players may purchase Action Card.
 - Players may choose to spend Production + Electricity + Recycling (1 unit of each) to buy a random Action Card from the deck.
-
-The Turn ends immediately after Market Phase, and next turn starts from Phase 1.
+- The Turn ends after the Market Phase, and next Turn starts from Phase 1.
 - If it was the final Turn, game ends after Conflict Resolution Phase, and players count their Victory Points to determine the ultimate winner!
 - If two or more players have the same amount of Victory Points, they play one more Turn.
