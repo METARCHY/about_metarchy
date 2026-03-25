@@ -1,12 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { io, Socket } from "socket.io-client";
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { io } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import { MatchState } from "@/types/game";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
 
-interface SocketContextContext {
+interface SocketContextValue {
     socket: Socket | null;
     socketId: string | undefined;
     isConnected: boolean;
@@ -19,7 +21,7 @@ interface SocketContextContext {
     error: string | null;
 }
 
-const SocketContext = createContext<SocketContextContext | null>(null);
+const SocketContext = createContext<SocketContextValue | null>(null);
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
